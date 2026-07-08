@@ -323,6 +323,7 @@ private slots:
 private:
     Q_INVOKABLE void OnMoviePlaybackCompleted();
     void UpdateStatusBar();
+    void UpdateRAStatusLabel();
     void UpdateBootHomeMenuState();
     void LoadTranslation();
     void UpdateWindowTitle();
@@ -361,6 +362,7 @@ private:
     QLabel* emu_speed_label = nullptr;
     QLabel* game_fps_label = nullptr;
     QLabel* emu_frametime_label = nullptr;
+    QLabel* ra_status_label = nullptr;
     QPushButton* graphics_api_button = nullptr;
     QPushButton* volume_button = nullptr;
     QWidget* volume_popup = nullptr;

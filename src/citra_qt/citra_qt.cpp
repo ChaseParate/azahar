@@ -549,8 +549,11 @@ void GMainWindow::InitializeWidgets() {
         tr("Time taken to emulate a 3DS frame, not counting framelimiting or v-sync. For "
            "full-speed emulation this should be at most 16.67 ms."));
 
+    ra_status_label = new QLabel();
+    ra_status_label->setToolTip(tr("RetroAchievements: achievements unlocked for this session."));
+
     for (auto& label : {loading_shaders_label, artic_traffic_label, emu_speed_label, game_fps_label,
-                        emu_frametime_label}) {
+                        emu_frametime_label, ra_status_label}) {
         label->setVisible(false);
         label->setFrameStyle(QFrame::NoFrame);
         label->setContentsMargins(4, 0, 4, 0);
@@ -2529,8 +2532,11 @@ void GMainWindow::OnStartGame() {
                 if (achievement_list_dialog) {
                     achievement_list_dialog->Refresh();
                 }
+                UpdateRAStatusLabel();
             });
         });
+    // Game may already be identified by the time OnStartGame fires (fast loads), so seed the label.
+    UpdateRAStatusLabel();
 }
 
 void GMainWindow::OnRestartGame() {
@@ -2577,6 +2583,7 @@ void GMainWindow::OnStopGame() {
     graphics_api_button->setEnabled(true);
     Settings::RestoreGlobalState(false);
     UpdateStatusButtons();
+    ra_status_label->setVisible(false);
 }
 
 void GMainWindow::OnLoadComplete() {
@@ -3617,6 +3624,30 @@ void GMainWindow::UpdateStatusBar() {
     emu_speed_label->setVisible(true);
     game_fps_label->setVisible(true);
     emu_frametime_label->setVisible(true);
+}
+
+void GMainWindow::UpdateRAStatusLabel() {
+    auto& client = system.RetroAchievementsClient();
+    if (!client.IsLoggedIn() || !client.IsGameLoaded()) {
+        ra_status_label->setVisible(false);
+        return;
+    }
+
+    const auto achievements = client.GetAchievements();
+    uint32_t unlocked = 0;
+    uint32_t total_pts = 0;
+    uint32_t earned_pts = 0;
+    for (const auto& a : achievements) {
+        total_pts += a.points;
+        if (a.state == 2) { // RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED
+            ++unlocked;
+            earned_pts += a.points;
+        }
+    }
+
+    ra_status_label->setText(
+        tr("RA: %1/%2 (%3 pts)").arg(unlocked).arg(achievements.size()).arg(earned_pts));
+    ra_status_label->setVisible(true);
 }
 
 void GMainWindow::UpdateBootHomeMenuState() {
