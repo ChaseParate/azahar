@@ -407,4 +407,33 @@ std::string Client::GetLoginToken() const {
     return Settings::values.ra_token;
 }
 
+std::vector<LeaderboardEntry> Client::GetLeaderboards() const {
+    std::vector<LeaderboardEntry> result;
+#ifdef ENABLE_RETROACHIEVEMENTS
+    if (!impl->rc_client || !IsGameLoaded()) return result;
+
+    rc_client_leaderboard_list_t* list =
+        rc_client_create_leaderboard_list(impl->rc_client, RC_CLIENT_LEADERBOARD_LIST_GROUPING_NONE);
+    if (!list) return result;
+
+    for (uint32_t b = 0; b < list->num_buckets; ++b) {
+        const rc_client_leaderboard_bucket_t& bucket = list->buckets[b];
+        for (uint32_t i = 0; i < bucket.num_leaderboards; ++i) {
+            const rc_client_leaderboard_t* lb = bucket.leaderboards[i];
+            if (!lb) continue;
+            result.push_back({
+                lb->title         ? lb->title         : "",
+                lb->description   ? lb->description   : "",
+                lb->tracker_value ? lb->tracker_value : "",
+                lb->id,
+                lb->state,
+            });
+        }
+    }
+
+    rc_client_destroy_leaderboard_list(list);
+#endif
+    return result;
+}
+
 } // namespace RetroAchievements

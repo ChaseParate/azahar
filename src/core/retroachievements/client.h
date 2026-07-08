@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Core {
 class System;
@@ -15,6 +17,14 @@ class System;
 namespace RetroAchievements {
 
 using LoginCallback = std::function<void(bool success, const std::string& message)>;
+
+struct LeaderboardEntry {
+    std::string title;
+    std::string description;
+    std::string tracker_value;
+    uint32_t id;
+    uint8_t state;
+};
 
 // Fired on the emulator thread when an achievement is unlocked.
 using AchievementTriggeredCallback =
@@ -60,6 +70,7 @@ public:
     // The UI layer sets this to show a popup. Pass nullptr to clear.
     void SetAchievementTriggeredCallback(AchievementTriggeredCallback callback);
 
+    [[nodiscard]] std::vector<LeaderboardEntry> GetLeaderboards() const;
     [[nodiscard]] bool IsHardcoreEnabled() const;
     [[nodiscard]] bool IsLoggedIn() const;
     [[nodiscard]] bool IsGameLoaded() const;
