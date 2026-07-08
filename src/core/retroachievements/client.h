@@ -38,6 +38,13 @@ struct LeaderboardEntry {
     uint8_t state;
 };
 
+struct LeaderboardRankEntry {
+    std::string user;
+    std::string display; // formatted score string
+    uint32_t rank;
+    time_t submitted;
+};
+
 // Fired on the emulator thread when an achievement is unlocked.
 using AchievementTriggeredCallback =
     std::function<void(const std::string& title, const std::string& description, uint32_t id)>;
@@ -82,7 +89,12 @@ public:
     // The UI layer sets this to show a popup. Pass nullptr to clear.
     void SetAchievementTriggeredCallback(AchievementTriggeredCallback callback);
 
+    using LeaderboardEntriesCallback =
+        std::function<void(bool success, std::vector<LeaderboardRankEntry> entries)>;
+
     [[nodiscard]] std::vector<AchievementEntry> GetAchievements() const;
+    void FetchLeaderboardEntries(uint32_t leaderboard_id, uint32_t count,
+                                 LeaderboardEntriesCallback callback);
     [[nodiscard]] std::vector<LeaderboardEntry> GetLeaderboards() const;
     [[nodiscard]] bool IsHardcoreEnabled() const;
     [[nodiscard]] bool IsLoggedIn() const;

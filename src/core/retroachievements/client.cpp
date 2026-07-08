@@ -407,6 +407,48 @@ std::string Client::GetLoginToken() const {
     return Settings::values.ra_token;
 }
 
+void Client::FetchLeaderboardEntries(uint32_t leaderboard_id, uint32_t count,
+                                      LeaderboardEntriesCallback callback) {
+#ifdef ENABLE_RETROACHIEVEMENTS
+    if (!impl->rc_client || !IsGameLoaded()) {
+        if (callback) callback(false, {});
+        return;
+    }
+
+    struct FetchCtx {
+        LeaderboardEntriesCallback cb;
+    };
+    auto* ctx = new FetchCtx{std::move(callback)};
+
+    rc_client_begin_fetch_leaderboard_entries(
+        impl->rc_client, leaderboard_id, 1, count,
+        [](int result, const char* /*error_message*/,
+           rc_client_leaderboard_entry_list_t* list,
+           rc_client_t* /*client*/, void* userdata) {
+            auto* ctx = static_cast<FetchCtx*>(userdata);
+            std::vector<LeaderboardRankEntry> entries;
+            if (result == RC_OK && list) {
+                entries.reserve(list->num_entries);
+                for (uint32_t i = 0; i < list->num_entries; ++i) {
+                    const auto& e = list->entries[i];
+                    entries.push_back({
+                        e.user ? e.user : "",
+                        std::string(e.display),
+                        e.rank,
+                        e.submitted,
+                    });
+                }
+                rc_client_destroy_leaderboard_entry_list(list);
+            }
+            if (ctx->cb) ctx->cb(result == RC_OK, std::move(entries));
+            delete ctx;
+        },
+        ctx);
+#else
+    if (callback) callback(false, {});
+#endif
+}
+
 std::vector<AchievementEntry> Client::GetAchievements() const {
     std::vector<AchievementEntry> result;
 #ifdef ENABLE_RETROACHIEVEMENTS
