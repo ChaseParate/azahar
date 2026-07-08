@@ -26,6 +26,7 @@ namespace RetroAchievements {
 
 struct Client::Impl {
     Core::System& system;
+    bool mock_mode = false;
 
     explicit Impl(Core::System& system_) : system(system_) {}
 
@@ -84,6 +85,12 @@ struct Client::Impl {
                                rc_client_t* client) {
         auto* self = static_cast<Impl*>(rc_client_get_userdata(client));
         if (!self) return 0;
+
+        // In mock mode return all-zeros so test achievement conditions (=0) always fire.
+        if (self->mock_mode) {
+            std::memset(buffer, 0, num_bytes);
+            return num_bytes;
+        }
 
         const std::size_t fcram_size = Memory::FCRAM_N3DS_SIZE; // 256 MB covers both old+new 3DS
         if (static_cast<std::size_t>(address) + num_bytes > fcram_size) return 0;
@@ -276,6 +283,7 @@ void Client::Initialize() {
         return; // already initialized
     }
     const bool mock_mode = Settings::values.ra_mock_mode.GetValue();
+    impl->mock_mode = mock_mode;
     impl->rc_client = rc_client_create(Impl::ReadMemory,
                                        mock_mode ? MockServerCall : Impl::ServerCall);
     if (!impl->rc_client) {
