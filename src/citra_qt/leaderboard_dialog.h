@@ -2,6 +2,7 @@
 
 #include <QDialog>
 
+class QLabel;
 class QTableWidget;
 
 namespace Core {
@@ -16,7 +17,10 @@ public:
 
 private:
     void PopulateLeaderboards();
+    void OnLeaderboardSelected(int row);
 
     Core::System& system;
-    QTableWidget* table;
+    QTableWidget* lb_table;    // list of leaderboards for this game
+    QLabel* entries_header;    // "Top scores for: <title>"
+    QTableWidget* entry_table; // fetched rank entries
 };
