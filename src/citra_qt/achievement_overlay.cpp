@@ -11,18 +11,24 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-static constexpr int kDisplayMs   = 5000; // fully visible duration
-static constexpr int kFadeMs      = 1000; // fade-out duration
-static constexpr int kMargin      = 16;   // px from window edge
+static constexpr int kDisplayMs   = 5000;
+static constexpr int kFadeMs      = 1000;
+static constexpr int kMargin      = 16;
 static constexpr int kPanelWidth  = 320;
 static constexpr int kPanelRadius = 8;
 
-AchievementOverlay::AchievementOverlay(QWidget* parent) : QWidget(parent) {
-    // Don't steal focus or intercept mouse events from the game
+AchievementOverlay::AchievementOverlay(QWidget* render_window)
+    // Qt::Tool window parented to the top-level main window so it:
+    //   • stays associated with (and in front of) the main window
+    //   • is automatically destroyed when the main window closes
+    //   • renders above the OpenGL native surface (separate OS-level window)
+    : QWidget(render_window ? render_window->window() : nullptr,
+              Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus),
+      render_window_(render_window) {
+
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
-    setWindowFlags(Qt::SubWindow);
 
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(12, 10, 12, 10);
@@ -61,12 +67,11 @@ AchievementOverlay::AchievementOverlay(QWidget* parent) : QWidget(parent) {
 }
 
 void AchievementOverlay::ShowAchievement(const QString& title, const QString& description) {
-    // Stop any in-progress fade so the new achievement starts fully visible
     fade_animation->stop();
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(graphicsEffect());
     if (opacity) opacity->setOpacity(1.0);
 
-    title_label->setText(QStringLiteral("🏆 %1").arg(title));
+    title_label->setText(QStringLiteral("\U0001F3C6 %1").arg(title));
     description_label->setText(description);
 
     adjustSize();
@@ -77,24 +82,20 @@ void AchievementOverlay::ShowAchievement(const QString& title, const QString& de
     dismiss_timer->start(kDisplayMs);
 }
 
+void AchievementOverlay::Reposition() {
+    if (!render_window_) return;
+    // Map render window's bottom-right corner to screen coordinates, then
+    // subtract our size and margin to anchor in the bottom-right of the game view.
+    const QPoint br = render_window_->mapToGlobal(render_window_->rect().bottomRight());
+    move(br.x() - width() - kMargin, br.y() - height() - kMargin);
+}
+
 void AchievementOverlay::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setBrush(QColor(20, 20, 20, 210));
     painter.setPen(QColor(180, 140, 0, 200));
     painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), kPanelRadius, kPanelRadius);
-}
-
-void AchievementOverlay::resizeEvent(QResizeEvent* event) {
-    QWidget::resizeEvent(event);
-    Reposition();
-}
-
-void AchievementOverlay::Reposition() {
-    if (!parentWidget()) return;
-    const QSize parent_size = parentWidget()->size();
-    move(parent_size.width()  - width()  - kMargin,
-         parent_size.height() - height() - kMargin);
 }
 
 void AchievementOverlay::FadeOut() {

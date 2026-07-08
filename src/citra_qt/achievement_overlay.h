@@ -10,26 +10,29 @@ class QLabel;
 class QPropertyAnimation;
 class QTimer;
 
-/// Non-blocking overlay shown in the bottom-right corner of the render window
-/// when a RetroAchievements achievement is unlocked. Auto-dismisses after 6 s.
+/// Frameless tool-window overlay shown in the bottom-right corner of the render window
+/// when a RetroAchievements achievement is unlocked. Auto-dismisses after 5 seconds.
+/// Implemented as a Qt::Tool window (not a child widget) so it renders above the OpenGL
+/// surface regardless of native-window Z-order.
 class AchievementOverlay : public QWidget {
     Q_OBJECT
 
 public:
-    explicit AchievementOverlay(QWidget* parent = nullptr);
+    /// render_window — the GRenderWindow widget; used for positioning.
+    explicit AchievementOverlay(QWidget* render_window);
 
-    /// Show the overlay for the given achievement. Safe to call from any thread
-    /// via QMetaObject::invokeMethod with Qt::QueuedConnection.
     void ShowAchievement(const QString& title, const QString& description);
+
+    /// Recalculate position relative to the current render window geometry.
+    void Reposition();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
 
 private:
-    void Reposition();
     void FadeOut();
 
+    QWidget* render_window_;
     QLabel* title_label;
     QLabel* description_label;
     QTimer* dismiss_timer;

@@ -10,11 +10,14 @@
 
 static constexpr int kMargin = 12;
 
-LeaderboardTrackerOverlay::LeaderboardTrackerOverlay(QWidget* parent) : QWidget(parent) {
+LeaderboardTrackerOverlay::LeaderboardTrackerOverlay(QWidget* render_window)
+    : QWidget(render_window ? render_window->window() : nullptr,
+              Qt::Tool | Qt::FramelessWindowHint | Qt::WindowDoesNotAcceptFocus),
+      render_window_(render_window) {
+
     setAttribute(Qt::WA_TransparentForMouseEvents);
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
-    setWindowFlags(Qt::SubWindow);
 
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(10, 6, 10, 6);
@@ -48,14 +51,9 @@ void LeaderboardTrackerOverlay::paintEvent(QPaintEvent*) {
     painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), 6, 6);
 }
 
-void LeaderboardTrackerOverlay::resizeEvent(QResizeEvent* event) {
-    QWidget::resizeEvent(event);
-    Reposition();
-}
-
 void LeaderboardTrackerOverlay::Reposition() {
-    if (!parentWidget()) return;
-    const QSize parent_size = parentWidget()->size();
-    // Top-right corner, opposite corner from the achievement overlay
-    move(parent_size.width() - width() - kMargin, kMargin);
+    if (!render_window_) return;
+    // Top-right corner — opposite corner from the achievement overlay.
+    const QPoint tr = render_window_->mapToGlobal(render_window_->rect().topRight());
+    move(tr.x() - width() - kMargin, tr.y() + kMargin);
 }
