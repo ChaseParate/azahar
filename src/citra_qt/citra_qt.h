@@ -46,6 +46,9 @@ class GraphicsVertexShaderWidget;
 class GRenderWindow;
 class IPCRecorderWidget;
 class LLEServiceModulesWidget;
+class AchievementListDialog;
+class AchievementOverlay;
+class LeaderboardTrackerOverlay;
 class LoadingScreen;
 #if MICROPROFILE_ENABLED
 class MicroProfileDialog;
@@ -248,6 +251,8 @@ private slots:
     void OnGameListShowList(bool show);
     void OnGameListOpenPerGameProperties(const QString& file);
     void OnConfigurePerGame();
+    void OnShowAchievementList();
+    void OnShowRALeaderboards();
     void OnMenuLoadFile();
     void OnMenuSetUpSystemFiles();
     void OnMenuInstallCIA();
@@ -319,6 +324,7 @@ private slots:
 private:
     Q_INVOKABLE void OnMoviePlaybackCompleted();
     void UpdateStatusBar();
+    void UpdateRAStatusLabel();
     void UpdateBootHomeMenuState();
     void LoadTranslation();
     void UpdateWindowTitle();
@@ -345,6 +351,9 @@ private:
 
     GameListPlaceholder* game_list_placeholder;
     LoadingScreen* loading_screen;
+    AchievementOverlay* achievement_overlay;
+    AchievementListDialog* achievement_list_dialog = nullptr;
+    LeaderboardTrackerOverlay* lb_tracker_overlay;
 
     // Status bar elements
     QProgressBar* progress_bar = nullptr;
@@ -355,6 +364,7 @@ private:
     QLabel* emu_speed_label = nullptr;
     QLabel* game_fps_label = nullptr;
     QLabel* emu_frametime_label = nullptr;
+    QLabel* ra_status_label = nullptr;
     QPushButton* graphics_api_button = nullptr;
     QPushButton* volume_button = nullptr;
     QWidget* volume_popup = nullptr;

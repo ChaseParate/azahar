@@ -626,6 +626,13 @@ struct Values {
     Setting<std::string> log_filter{"*:Info", "log_filter"};
     Setting<std::string> log_regex_filter{"", "log_regex_filter"};
 
+    // RetroAchievements
+    Setting<bool> ra_enabled{false, "ra_enabled"};
+    Setting<bool> ra_hardcore_mode{false, "ra_hardcore_mode"};
+    Setting<bool> ra_mock_mode{false, "ra_mock_mode"};
+    std::string ra_username;
+    std::string ra_token; // persisted auth token (not the password)
+
     // Video Dumping
     std::string output_format;
     std::string format_options;

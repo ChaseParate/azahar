@@ -38,6 +38,10 @@
 #endif
 #include "citra_meta/common_strings.h"
 #include "citra_qt/aboutdialog.h"
+#include "citra_qt/achievement_list_dialog.h"
+#include "citra_qt/achievement_overlay.h"
+#include "citra_qt/leaderboard_dialog.h"
+#include "citra_qt/leaderboard_tracker_overlay.h"
 #include "citra_qt/applets/mii_selector.h"
 #include "citra_qt/applets/swkbd.h"
 #include "citra_qt/bootmanager.h"
@@ -498,6 +502,10 @@ void GMainWindow::InitializeWidgets() {
     loading_screen = new LoadingScreen(this);
     loading_screen->hide();
     ui->horizontalLayout->addWidget(loading_screen);
+
+    // Overlay parented to render_window so it sits on top of the game surface
+    achievement_overlay = new AchievementOverlay(render_window);
+    lb_tracker_overlay = new LeaderboardTrackerOverlay(render_window);
     connect(loading_screen, &LoadingScreen::Hidden, this, [&] {
         loading_screen->Clear();
         if (emulation_running) {
@@ -543,8 +551,11 @@ void GMainWindow::InitializeWidgets() {
         tr("Time taken to emulate a 3DS frame, not counting framelimiting or v-sync. For "
            "full-speed emulation this should be at most 16.67 ms."));
 
+    ra_status_label = new QLabel();
+    ra_status_label->setToolTip(tr("RetroAchievements: achievements unlocked for this session."));
+
     for (auto& label : {loading_shaders_label, artic_traffic_label, emu_speed_label, game_fps_label,
-                        emu_frametime_label}) {
+                        emu_frametime_label, ra_status_label}) {
         label->setVisible(false);
         label->setFrameStyle(QFrame::NoFrame);
         label->setContentsMargins(4, 0, 4, 0);
@@ -1055,6 +1066,10 @@ void GMainWindow::ConnectMenuEvents() {
     });
     connect_menu(ui->action_Configure, &GMainWindow::OnConfigure, QAction::PreferencesRole);
     connect_menu(ui->action_Configure_Current_Game, &GMainWindow::OnConfigurePerGame);
+    connect(ui->action_RA_Achievements, &QAction::triggered, this,
+            &GMainWindow::OnShowAchievementList);
+    connect(ui->action_RA_Leaderboards, &QAction::triggered, this,
+            &GMainWindow::OnShowRALeaderboards);
 
     // View
     connect_menu(ui->action_Single_Window_Mode, &GMainWindow::ToggleWindowMode);
@@ -1137,6 +1152,8 @@ void GMainWindow::UpdateMenuState() {
         ui->action_Remove_Amiibo,
         ui->action_Pause,
         ui->action_Advance_Frame,
+        ui->action_RA_Achievements,
+        ui->action_RA_Leaderboards,
     };
 
     for (QAction* action : running_actions) {
@@ -2507,6 +2524,29 @@ void GMainWindow::OnStartGame() {
 
     UpdateSaveStates();
     UpdateStatusButtons();
+
+    // Register achievement popup — fired on the emulator thread, shown on the UI thread.
+    system.RetroAchievementsClient().SetAchievementTriggeredCallback(
+        [this](const std::string& title, const std::string& description, uint32_t /*id*/) {
+            QMetaObject::invokeMethod(this, [this, title, description]() {
+                achievement_overlay->ShowAchievement(QString::fromStdString(title),
+                                                     QString::fromStdString(description));
+                if (achievement_list_dialog) {
+                    achievement_list_dialog->Refresh();
+                }
+                UpdateRAStatusLabel();
+            });
+        });
+    // Game may already be identified by the time OnStartGame fires (fast loads), so seed the label.
+    UpdateRAStatusLabel();
+
+    system.RetroAchievementsClient().SetLeaderboardTrackerCallback(
+        [this](const std::string& value) {
+            const QString qval = QString::fromStdString(value);
+            QMetaObject::invokeMethod(this, [this, qval]() {
+                lb_tracker_overlay->Show(qval);
+            });
+        });
 }
 
 void GMainWindow::OnRestartGame() {
@@ -2543,15 +2583,20 @@ void GMainWindow::OnPauseContinueGame() {
 
 void GMainWindow::OnStopGame() {
     SetTurboEnabled(false);
+    system.RetroAchievementsClient().SetAchievementTriggeredCallback(nullptr);
 
     play_time_manager->Stop();
     // Update game list to show new play time
     game_list->PopulateAsync(UISettings::values.game_dirs);
 
+    system.RetroAchievementsClient().SetLeaderboardTrackerCallback(nullptr);
+    lb_tracker_overlay->hide();
+
     ShutdownGame();
     graphics_api_button->setEnabled(true);
     Settings::RestoreGlobalState(false);
     UpdateStatusButtons();
+    ra_status_label->setVisible(false);
 }
 
 void GMainWindow::OnLoadComplete() {
@@ -3594,6 +3639,30 @@ void GMainWindow::UpdateStatusBar() {
     emu_frametime_label->setVisible(true);
 }
 
+void GMainWindow::UpdateRAStatusLabel() {
+    auto& client = system.RetroAchievementsClient();
+    if (!client.IsLoggedIn() || !client.IsGameLoaded()) {
+        ra_status_label->setVisible(false);
+        return;
+    }
+
+    const auto achievements = client.GetAchievements();
+    uint32_t unlocked = 0;
+    uint32_t total_pts = 0;
+    uint32_t earned_pts = 0;
+    for (const auto& a : achievements) {
+        total_pts += a.points;
+        if (a.state == 2) { // RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED
+            ++unlocked;
+            earned_pts += a.points;
+        }
+    }
+
+    ra_status_label->setText(
+        tr("RA: %1/%2 (%3 pts)").arg(unlocked).arg(achievements.size()).arg(earned_pts));
+    ra_status_label->setVisible(true);
+}
+
 void GMainWindow::UpdateBootHomeMenuState() {
     const auto current_region = Settings::values.region_value.GetValue();
     for (u32 region = 0; region < Core::NUM_SYSTEM_TITLE_REGIONS; region++) {
@@ -4034,6 +4103,25 @@ void GMainWindow::OnLanguageChanged(const QString& locale) {
     UpdateWindowTitle();
 }
 
+void GMainWindow::OnShowAchievementList() {
+    // Use a non-modal dialog so gameplay can continue; only one open at a time.
+    if (!achievement_list_dialog) {
+        achievement_list_dialog = new AchievementListDialog(system, this);
+        connect(achievement_list_dialog, &QDialog::finished, this, [this]() {
+            achievement_list_dialog = nullptr;
+        });
+        achievement_list_dialog->show();
+    } else {
+        achievement_list_dialog->raise();
+        achievement_list_dialog->activateWindow();
+    }
+}
+
+void GMainWindow::OnShowRALeaderboards() {
+    LeaderboardDialog dialog(system, this);
+    dialog.exec();
+}
+
 void GMainWindow::OnConfigurePerGame() {
     u64 title_id{};
     system.GetAppLoader().ReadProgramId(title_id);
@@ -4113,11 +4201,15 @@ void GMainWindow::UpdateWindowTitle() {
     if (game_title.isEmpty()) {
         setWindowTitle(QStringLiteral("Azahar %1").arg(full_name));
     } else {
-        setWindowTitle(QStringLiteral("Azahar %1 | %2").arg(full_name, game_title));
+        const std::string rp = system.RetroAchievementsClient().GetRichPresenceMessage();
+        const QString title_with_rp =
+            rp.empty() ? game_title
+                       : QStringLiteral("%1 | %2").arg(game_title, QString::fromStdString(rp));
+        setWindowTitle(QStringLiteral("Azahar %1 | %2").arg(full_name, title_with_rp));
         render_window->setWindowTitle(
-            QStringLiteral("Azahar %1 | %2 | %3").arg(full_name, game_title, tr("Primary Window")));
+            QStringLiteral("Azahar %1 | %2 | %3").arg(full_name, title_with_rp, tr("Primary Window")));
         secondary_window->setWindowTitle(QStringLiteral("Azahar %1 | %2 | %3")
-                                             .arg(full_name, game_title, tr("Secondary Window")));
+                                             .arg(full_name, title_with_rp, tr("Secondary Window")));
     }
 }
 

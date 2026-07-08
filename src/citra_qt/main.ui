@@ -120,6 +120,9 @@
     <addaction name="separator"/>
     <addaction name="action_Configure"/>
     <addaction name="action_Configure_Current_Game"/>
+    <addaction name="separator"/>
+    <addaction name="action_RA_Achievements"/>
+    <addaction name="action_RA_Leaderboards"/>
    </widget>
    <widget class="QMenu" name="menu_View">
     <property name="title">
@@ -700,6 +703,28 @@
    </property>
    <property name="text">
     <string>Configure Current Application...</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_RA_Achievements">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Achievements...</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::NoRole</enum>
+   </property>
+  </action>
+  <action name="action_RA_Leaderboards">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>RetroAchievements Leaderboards...</string>
    </property>
    <property name="menuRole">
     <enum>QAction::NoRole</enum>

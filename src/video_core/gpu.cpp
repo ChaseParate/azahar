@@ -216,6 +216,7 @@ void GPU::SetBufferSwap(u32 screen_id, const Service::GSP::FrameBufferInfo& info
         MicroProfileFlip();
         impl->system.perf_stats->EndGameFrame();
         right_eye_disabler->ReportEndFrame();
+        impl->system.RetroAchievementsClient().DoFrame();
     }
 }
 
