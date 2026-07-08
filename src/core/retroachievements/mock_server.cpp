@@ -8,6 +8,7 @@
 
 #include <string>
 #include <string_view>
+#include "common/logging/log.h"
 
 namespace RetroAchievements {
 
@@ -17,70 +18,34 @@ static constexpr std::string_view kLoginOk =
     R"({"Success":true,"User":"MockUser","Token":"MOCKTOKEN123","Score":100,)"
     R"("SoftcoreScore":50,"Messages":0,"Permissions":1,"AccountType":"Registered"})";
 
-// r=gameid — rcheevos sends the ROM hash here to look up the game.
-// We return a fixed game ID so it always "finds" a game.
-static constexpr std::string_view kGameId =
-    R"({"Success":true,"GameID":999})";
 
-// r=patch — full game data including achievements and leaderboards.
+// r=achievementsets — modern single-call endpoint that replaces the old gameid+patch two-step.
+// Field names differ from the old patch format: GameId/ConsoleId/ImageIconUrl, Sets[] wrapper.
+// Format confirmed from rcheevos/test/test_rc_client.c patchdata_2ach_1lbd.
 //
-// Achievement MemAddr conditions (FCRAM-relative byte reads):
-//   0xH0000=0.60.  — triggers after FCRAM byte[0] has equalled 0 for 60 frames (~1 sec)
-//   0xH0000=0.300. — triggers after 300 such frames (~5 sec)
-// If byte[0] is not 0 in the game you load, nothing fires — that itself tells you something
-// about the FCRAM layout. Edit the condition to match a known-zero address.
-//
-// Leaderboard Mem: starts tracking once byte[0]==0 for 30 frames, never cancels, never
-// auto-submits (so you can close the game to end it). Value reads a 32-bit word at byte[0].
-static constexpr std::string_view kPatch = R"({
-  "Success": true,
-  "PatchData": {
-    "ID": 999,
-    "Title": "Azahar Mock Test",
-    "ConsoleID": 18,
-    "ImageIcon": "/Images/000001.png",
-    "RichPresencePatch": "Display:\r\nMock mode active - testing rcheevos pipeline",
-    "Achievements": [
-      {
-        "ID": 1001,
-        "Title": "Hello World",
-        "Description": "rcheevos read FCRAM byte[0]==0 for 60 consecutive frames",
-        "Points": 5,
-        "MemAddr": "0xH0000=0.60.",
-        "Author": "MockDev",
-        "Modified": 1700000000,
-        "Created": 1700000000,
-        "BadgeName": "00000",
-        "Flags": 3,
-        "Type": null
-      },
-      {
-        "ID": 1002,
-        "Title": "Still Alive",
-        "Description": "rcheevos has been reading FCRAM successfully for ~5 seconds",
-        "Points": 10,
-        "MemAddr": "0xH0000=0.300.",
-        "Author": "MockDev",
-        "Modified": 1700000000,
-        "Created": 1700000000,
-        "BadgeName": "00000",
-        "Flags": 3,
-        "Type": null
-      }
-    ],
-    "Leaderboards": [
-      {
-        "ID": 2001,
-        "Title": "FCRAM Word at 0",
-        "Description": "Value of the 32-bit word at FCRAM offset 0",
-        "Mem": "STA:0xH0000=0.30.::CAN:0=1::SUB:0=1::VAL:0xX0000",
-        "Format": "VALUE",
-        "LowerIsBetter": 0,
-        "Hidden": 0
-      }
-    ]
-  }
-})";
+// Achievement MemAddr conditions (FCRAM-relative byte reads, mock memory = all zeros):
+//   0xH0000=0.60.  — triggers after ~1 second at 60fps
+//   0xH0000=0.300. — triggers after ~5 seconds; being the last achievement it also fires mastery
+static constexpr std::string_view kAchievementSets = R"({"Success":true,)"
+    R"("GameId":999,"Title":"Azahar Mock Test","ConsoleId":18,)"
+    R"("ImageIconUrl":"http://retroachievements.org/Images/000001.png",)"
+    R"("RichPresenceGameId":999,"RichPresencePatch":"Display:\r\nMock mode active",)"
+    R"("Sets":[{)"
+      R"("AchievementSetId":1,"GameId":999,"Title":null,"Type":"core",)"
+      R"("ImageIconUrl":"http://retroachievements.org/Images/000001.png",)"
+      R"("Achievements":[)"
+        R"({"ID":1001,"Title":"Hello World","Description":"rcheevos read FCRAM successfully",)"
+         R"("Points":5,"MemAddr":"0xH0000=0.60.","Author":"MockDev","BadgeName":"00000",)"
+         R"("Created":1700000000,"Modified":1700000000,"Flags":3},)"
+        R"({"ID":1002,"Title":"Still Alive","Description":"Memory reads working for ~5 seconds",)"
+         R"("Points":10,"MemAddr":"0xH0000=0.300.","Author":"MockDev","BadgeName":"00000",)"
+         R"("Created":1700000000,"Modified":1700000000,"Flags":3})"
+      R"(],)"
+      R"("Leaderboards":[)"
+        R"({"ID":2001,"Title":"FCRAM Word at 0","Description":"32-bit value at FCRAM offset 0",)"
+         R"("Mem":"STA:0xH0000=0.30.::CAN:0=1::SUB:0=1::VAL:0xX0000","Format":"VALUE"})"
+      R"(])"
+    R"(}]})";
 
 static constexpr std::string_view kStartSession =
     R"({"Success":true,"ServerNow":1700000000})";
@@ -117,11 +82,13 @@ static std::string_view RouteRequest(const rc_api_request_t* request) {
     }
 
     if (r_val == "login2" || r_val == "tokenlogin") return kLoginOk;
-    if (r_val == "gameid")                           return kGameId;
-    if (r_val == "patch")                            return kPatch;
+    if (r_val == "achievementsets")                  return kAchievementSets;
     if (r_val == "startsession")                     return kStartSession;
     if (r_val == "awardachievement")                 return kAwardAchievement;
     if (r_val == "ping")                             return kPing;
+
+    LOG_WARNING(RetroAchievements, "[Mock] Unhandled endpoint — r='{}' | url='{}' | post='{}'",
+                r_val, request->url ? request->url : "", request->post_data ? request->post_data : "");
     return kUnknown;
 }
 
