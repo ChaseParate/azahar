@@ -8,12 +8,11 @@
 #include "core/core.h"
 
 #ifdef ENABLE_RETROACHIEVEMENTS
+#include <cstring>
 #include <thread>
 #include <httplib.h>
 #include <rc_client.h>
 #include <rc_consoles.h>
-#include "core/hle/kernel/kernel.h"
-#include "core/hle/kernel/process.h"
 #include "core/memory.h"
 #endif
 
@@ -73,26 +72,24 @@ struct Client::Impl {
     }
 
     // ── Memory read ──────────────────────────────────────────────────────────
-    // rcheevos passes a flat RA address. For 3DS, achievement authors target the
-    // application heap which starts at virtual address 0x08000000. We add that
-    // base so that RA address 0x0 maps to 3DS VAddr 0x08000000.
+    // rcheevos passes a flat RA address starting at 0. For 3DS, the convention
+    // used by achievement authors is FCRAM-relative: RA address 0 maps to the
+    // first byte of FCRAM (physical 0x20000000), which in virtual memory is the
+    // start of the linear heap (0x14000000). We use GetFCRAMPointer to read
+    // directly from FCRAM without any virtual-address translation, which is both
+    // correct and avoids faulting on unmapped virtual pages.
     static uint32_t ReadMemory(uint32_t address, uint8_t* buffer, uint32_t num_bytes,
                                rc_client_t* client) {
         auto* self = static_cast<Impl*>(rc_client_get_userdata(client));
         if (!self) return 0;
 
-        auto process = self->system.Kernel().GetCurrentProcess();
-        if (!process) return 0;
+        const std::size_t fcram_size = Memory::FCRAM_N3DS_SIZE; // 256 MB covers both old+new 3DS
+        if (static_cast<std::size_t>(address) + num_bytes > fcram_size) return 0;
 
-        static constexpr u32 kHeapBase = Memory::HEAP_VADDR; // 0x08000000
-        const VAddr vaddr = static_cast<VAddr>(address) + kHeapBase;
+        const u8* src = self->system.Memory().GetFCRAMPointer(address);
+        if (!src) return 0;
 
-        // ReadBlock returns void; treat any exception as a failed read.
-        try {
-            self->system.Memory().ReadBlock(*process, vaddr, buffer, num_bytes);
-        } catch (...) {
-            return 0;
-        }
+        std::memcpy(buffer, src, num_bytes);
         return num_bytes;
     }
 
@@ -225,11 +222,31 @@ struct Client::Impl {
         if (result == RC_OK) {
             const rc_client_game_t* game = rc_client_get_game_info(client);
             if (game) {
-                LOG_INFO(RetroAchievements, "Game identified: '{}' (ID {})",
-                         game->title ? game->title : "unknown", game->id);
+                LOG_INFO(RetroAchievements, "Game identified: '{}' (ID {}, hash: {})",
+                         game->title ? game->title : "unknown", game->id,
+                         game->hash ? game->hash : "unknown");
             }
+
+            // Log achievement set summary so we know what was downloaded.
+            rc_client_achievement_list_t* list = rc_client_create_achievement_list(
+                client, RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE,
+                RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_LOCK_STATE);
+            if (list) {
+                uint32_t total = 0;
+                for (uint32_t b = 0; b < list->num_buckets; ++b)
+                    total += list->buckets[b].num_achievements;
+                LOG_INFO(RetroAchievements, "Achievement set loaded: {} achievements", total);
+                rc_client_destroy_achievement_list(list);
+            }
+
+            LOG_INFO(RetroAchievements,
+                     "[POC] ReadMemory uses FCRAM-relative addressing. "
+                     "RA address 0x0 = FCRAM byte 0 = virtual 0x14000000 (linear heap). "
+                     "Check the log filter 'RetroAchievements' while playing to see events.");
         } else if (result == RC_NO_GAME_LOADED) {
-            LOG_INFO(RetroAchievements, "Game not found in RetroAchievements database");
+            LOG_INFO(RetroAchievements,
+                     "Game not found in RetroAchievements database — "
+                     "ROM may not be supported or hash did not match.");
         } else {
             LOG_WARNING(RetroAchievements, "Game identification failed: {}",
                         error_message ? error_message : "unknown error");
