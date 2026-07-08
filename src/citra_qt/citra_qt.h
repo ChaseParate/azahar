@@ -249,6 +249,7 @@ private slots:
     void OnGameListShowList(bool show);
     void OnGameListOpenPerGameProperties(const QString& file);
     void OnConfigurePerGame();
+    void OnShowRALeaderboards();
     void OnMenuLoadFile();
     void OnMenuSetUpSystemFiles();
     void OnMenuInstallCIA();

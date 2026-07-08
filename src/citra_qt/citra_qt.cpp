@@ -39,6 +39,7 @@
 #include "citra_meta/common_strings.h"
 #include "citra_qt/aboutdialog.h"
 #include "citra_qt/achievement_overlay.h"
+#include "citra_qt/leaderboard_dialog.h"
 #include "citra_qt/applets/mii_selector.h"
 #include "citra_qt/applets/swkbd.h"
 #include "citra_qt/bootmanager.h"
@@ -1059,6 +1060,8 @@ void GMainWindow::ConnectMenuEvents() {
     });
     connect_menu(ui->action_Configure, &GMainWindow::OnConfigure, QAction::PreferencesRole);
     connect_menu(ui->action_Configure_Current_Game, &GMainWindow::OnConfigurePerGame);
+    connect(ui->action_RA_Leaderboards, &QAction::triggered, this,
+            &GMainWindow::OnShowRALeaderboards);
 
     // View
     connect_menu(ui->action_Single_Window_Mode, &GMainWindow::ToggleWindowMode);
@@ -1141,6 +1144,7 @@ void GMainWindow::UpdateMenuState() {
         ui->action_Remove_Amiibo,
         ui->action_Pause,
         ui->action_Advance_Frame,
+        ui->action_RA_Leaderboards,
     };
 
     for (QAction* action : running_actions) {
@@ -4046,6 +4050,11 @@ void GMainWindow::OnLanguageChanged(const QString& locale) {
     ui->retranslateUi(this);
     RetranslateStatusBar();
     UpdateWindowTitle();
+}
+
+void GMainWindow::OnShowRALeaderboards() {
+    LeaderboardDialog dialog(system, this);
+    dialog.exec();
 }
 
 void GMainWindow::OnConfigurePerGame() {
