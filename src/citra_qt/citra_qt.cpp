@@ -38,6 +38,7 @@
 #endif
 #include "citra_meta/common_strings.h"
 #include "citra_qt/aboutdialog.h"
+#include "citra_qt/achievement_overlay.h"
 #include "citra_qt/applets/mii_selector.h"
 #include "citra_qt/applets/swkbd.h"
 #include "citra_qt/bootmanager.h"
@@ -498,6 +499,9 @@ void GMainWindow::InitializeWidgets() {
     loading_screen = new LoadingScreen(this);
     loading_screen->hide();
     ui->horizontalLayout->addWidget(loading_screen);
+
+    // Overlay parented to render_window so it sits on top of the game surface
+    achievement_overlay = new AchievementOverlay(render_window);
     connect(loading_screen, &LoadingScreen::Hidden, this, [&] {
         loading_screen->Clear();
         if (emulation_running) {
@@ -2508,15 +2512,12 @@ void GMainWindow::OnStartGame() {
     UpdateSaveStates();
     UpdateStatusButtons();
 
-    // Register achievement popup callback — fired on the emulator thread, marshalled to UI thread.
+    // Register achievement popup — fired on the emulator thread, shown on the UI thread.
     system.RetroAchievementsClient().SetAchievementTriggeredCallback(
         [this](const std::string& title, const std::string& description, uint32_t /*id*/) {
             QMetaObject::invokeMethod(this, [this, title, description]() {
-                QMessageBox::information(
-                    this, tr("Achievement Unlocked!"),
-                    tr("<b>%1</b><br>%2")
-                        .arg(QString::fromStdString(title))
-                        .arg(QString::fromStdString(description)));
+                achievement_overlay->ShowAchievement(QString::fromStdString(title),
+                                                     QString::fromStdString(description));
             });
         });
 }

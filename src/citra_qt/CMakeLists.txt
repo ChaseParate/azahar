@@ -137,6 +137,8 @@ add_library(citra_qt STATIC EXCLUDE_FROM_ALL
     game_list_worker.h
     hotkeys.cpp
     hotkeys.h
+    achievement_overlay.cpp
+    achievement_overlay.h
     loading_screen.cpp
     loading_screen.h
     loading_screen.ui
