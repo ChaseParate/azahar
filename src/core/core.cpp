@@ -73,7 +73,7 @@ Core::Timing& Global() {
     return System::GetInstance().CoreTiming();
 }
 
-System::System() : movie{*this}, cheat_engine{*this} {}
+System::System() : movie{*this}, cheat_engine{*this}, ra_client{*this} {}
 
 System::~System() = default;
 
@@ -123,6 +123,11 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     case Signal::Shutdown:
         return ResultStatus::ShutdownRequested;
     case Signal::Load: {
+        if (ra_client.IsHardcoreEnabled() && ra_client.IsGameLoaded()) {
+            LOG_WARNING(Core, "Save state load blocked: RetroAchievements hardcore mode is active");
+            status_details = "Save states are disabled in RetroAchievements hardcore mode";
+            return ResultStatus::ErrorSavestate;
+        }
         if (save_state_request_status != SaveStateStatus::NONE) {
             LOG_ERROR(Core, "A pending save state operation has not finished yet");
             status_details = "A pending save state operation has not finished yet";
@@ -134,6 +139,11 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
         break;
     }
     case Signal::Save: {
+        if (ra_client.IsHardcoreEnabled() && ra_client.IsGameLoaded()) {
+            LOG_WARNING(Core, "Save state save blocked: RetroAchievements hardcore mode is active");
+            status_details = "Save states are disabled in RetroAchievements hardcore mode";
+            return ResultStatus::ErrorSavestate;
+        }
         if (save_state_request_status != SaveStateStatus::NONE) {
             LOG_ERROR(Core, "A pending save state operation has not finished yet");
             status_details = "A pending save state operation has not finished yet";
@@ -456,6 +466,11 @@ System::ResultStatus System::Load(Frontend::EmuWindow& emu_window, const std::st
     cheat_engine.LoadCheatFile(title_id);
     cheat_engine.Connect(process->process_id);
 
+    if (Settings::values.ra_enabled.GetValue()) {
+        ra_client.Initialize();
+        ra_client.LoadGame(filepath);
+    }
+
     perf_stats = std::make_unique<PerfStats>(title_id);
 
     if (Settings::values.dump_textures) {
@@ -690,6 +705,9 @@ void System::Shutdown(bool is_deserializing) {
 
     // Shutdown emulation session
     is_powered_on = false;
+
+    ra_client.UnloadGame();
+    ra_client.Shutdown();
 
     gpu.reset();
     if (!is_deserializing) {

@@ -384,6 +384,24 @@ if (ENABLE_WEB_SERVICE)
     endif()
 endif()
 
+# rcheevos — RetroAchievements core library
+if (ENABLE_RETROACHIEVEMENTS)
+    file(GLOB_RECURSE RCHEEVOS_SOURCES rcheevos/src/*.c)
+    if (NOT RCHEEVOS_SOURCES)
+        message(FATAL_ERROR
+            "rcheevos submodule is empty. Run:\n"
+            "  git submodule add https://github.com/RetroAchievements/rcheevos externals/rcheevos\n"
+            "  git submodule update --init externals/rcheevos")
+    endif()
+    # rc_libretro.c is only for libretro cores (e.g. RetroArch) and requires libretro.h.
+    # We are a standalone host app using rc_client, so exclude it.
+    list(FILTER RCHEEVOS_SOURCES EXCLUDE REGEX "rc_libretro\\.c$")
+    add_library(rcheevos STATIC ${RCHEEVOS_SOURCES})
+    target_include_directories(rcheevos PUBLIC rcheevos/include)
+    target_compile_definitions(rcheevos PUBLIC RC_CLIENT_SUPPORTS_HASH)
+    target_disable_warnings(rcheevos)
+endif()
+
 # lodepng
 if(USE_SYSTEM_LODEPNG)
     add_library(lodepng INTERFACE)

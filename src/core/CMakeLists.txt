@@ -522,6 +522,16 @@ if (ENABLE_SCRIPTING)
     )
 endif()
 
+target_sources(citra_core PRIVATE
+    retroachievements/client.cpp
+    retroachievements/client.h
+)
+
+if (ENABLE_RETROACHIEVEMENTS)
+    target_compile_definitions(citra_core PUBLIC -DENABLE_RETROACHIEVEMENTS)
+    target_link_libraries(citra_core PRIVATE rcheevos)
+endif()
+
 if ("x86_64" IN_LIST ARCHITECTURE OR "arm64" IN_LIST ARCHITECTURE)
     target_sources(citra_core PRIVATE
         arm/dynarmic/arm_dynarmic.cpp

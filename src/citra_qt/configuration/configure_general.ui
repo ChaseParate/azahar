@@ -317,6 +317,100 @@
        </layout>
       </widget>
      </item>
+     <item>
+      <widget class="QGroupBox" name="retroachievements_group">
+       <property name="title">
+        <string>RetroAchievements</string>
+       </property>
+       <layout class="QVBoxLayout" name="ra_group_layout">
+        <item>
+         <widget class="QCheckBox" name="ra_enable_checkbox">
+          <property name="text">
+           <string>Enable RetroAchievements</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="ra_hardcore_checkbox">
+          <property name="text">
+           <string>Hardcore Mode (disables save states and cheats)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QWidget" name="ra_login_form" native="true">
+          <layout class="QGridLayout" name="ra_login_grid">
+           <item row="0" column="0">
+            <widget class="QLabel" name="ra_username_label">
+             <property name="text">
+              <string>Username</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="ra_username_edit">
+             <property name="placeholderText">
+              <string>RetroAchievements username</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="ra_password_label">
+             <property name="text">
+              <string>Password</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="ra_password_edit">
+             <property name="echoMode">
+              <enum>QLineEdit::Password</enum>
+             </property>
+             <property name="placeholderText">
+              <string>RetroAchievements password</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1">
+            <widget class="QPushButton" name="ra_login_button">
+             <property name="text">
+              <string>Log In</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QWidget" name="ra_logged_in_widget" native="true">
+          <layout class="QHBoxLayout" name="ra_logged_in_layout">
+           <item>
+            <widget class="QLabel" name="ra_status_label">
+             <property name="text">
+              <string>Not logged in</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="ra_spacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="ra_logout_button">
+             <property name="text">
+              <string>Log Out</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item alignment="Qt::AlignRight">
       <widget class="QPushButton" name="button_reset_defaults">
        <property name="text">

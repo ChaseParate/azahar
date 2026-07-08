@@ -264,6 +264,7 @@ void QtConfig::ReadValues() {
         ReadMiscellaneousValues();
         ReadDebuggingValues();
         ReadWebServiceValues();
+        ReadRetroAchievementsValues();
         ReadVideoDumpingValues();
     }
 
@@ -887,6 +888,19 @@ void QtConfig::ReadUILayoutValues() {
     qt_config->endGroup();
 }
 
+void QtConfig::ReadRetroAchievementsValues() {
+    qt_config->beginGroup(QStringLiteral("RetroAchievements"));
+
+    ReadBasicSetting(Settings::values.ra_enabled);
+    ReadBasicSetting(Settings::values.ra_hardcore_mode);
+    Settings::values.ra_username =
+        ReadSetting(QStringLiteral("ra_username")).toString().toStdString();
+    Settings::values.ra_token =
+        ReadSetting(QStringLiteral("ra_token")).toString().toStdString();
+
+    qt_config->endGroup();
+}
+
 void QtConfig::ReadWebServiceValues() {
     qt_config->beginGroup(QStringLiteral("WebService"));
 
@@ -910,6 +924,7 @@ void QtConfig::SaveValues() {
         SaveMiscellaneousValues();
         SaveDebuggingValues();
         SaveWebServiceValues();
+        SaveRetroAchievementsValues();
         SaveVideoDumpingValues();
     }
 
@@ -1405,6 +1420,19 @@ void QtConfig::SaveUILayoutValues() {
     WriteSetting(QStringLiteral("microProfileDialogGeometry"),
                  UISettings::values.microprofile_geometry);
     WriteBasicSetting(UISettings::values.microprofile_visible);
+
+    qt_config->endGroup();
+}
+
+void QtConfig::SaveRetroAchievementsValues() {
+    qt_config->beginGroup(QStringLiteral("RetroAchievements"));
+
+    WriteBasicSetting(Settings::values.ra_enabled);
+    WriteBasicSetting(Settings::values.ra_hardcore_mode);
+    WriteSetting(QStringLiteral("ra_username"),
+                 QString::fromStdString(Settings::values.ra_username));
+    WriteSetting(QStringLiteral("ra_token"),
+                 QString::fromStdString(Settings::values.ra_token));
 
     qt_config->endGroup();
 }

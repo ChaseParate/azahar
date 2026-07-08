@@ -4,6 +4,7 @@
 
 #include <QDesktopServices>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QMessageBox>
 #include <QUrl>
 #include "citra_qt/configuration/configuration_shared.h"
@@ -11,6 +12,7 @@
 #include "citra_qt/uisettings.h"
 #include "common/file_util.h"
 #include "common/settings.h"
+#include "core/core.h"
 #include "ui_configure_general.h"
 
 // The QSlider doesn't have an easy way to set a custom step amount,
@@ -53,6 +55,13 @@ ConfigureGeneral::ConfigureGeneral(QWidget* parent)
     connect(ui->button_reset_defaults, &QPushButton::clicked, this,
             &ConfigureGeneral::ResetDefaults);
 
+    connect(ui->ra_login_button, &QPushButton::clicked, this,
+            &ConfigureGeneral::OnRetroAchievementsLogin);
+    connect(ui->ra_logout_button, &QPushButton::clicked, this,
+            &ConfigureGeneral::OnRetroAchievementsLogout);
+
+    UpdateRetroAchievementsLoginState();
+
     connect(ui->frame_limit, &QSlider::valueChanged, this, [&](int value) {
         if (value == ui->frame_limit->maximum()) {
             ui->emulation_speed_display_label->setText(tr("unthrottled"));
@@ -80,6 +89,9 @@ ConfigureGeneral::~ConfigureGeneral() = default;
 
 void ConfigureGeneral::SetConfiguration() {
     if (Settings::IsConfiguringGlobal()) {
+        ui->ra_enable_checkbox->setChecked(Settings::values.ra_enabled.GetValue());
+        ui->ra_hardcore_checkbox->setChecked(Settings::values.ra_hardcore_mode.GetValue());
+
         ui->turbo_limit->setValue(SettingsToSlider(Settings::values.turbo_limit.GetValue()));
         ui->turbo_limit_display_label->setText(
             QStringLiteral("%1%").arg(Settings::values.turbo_limit.GetValue()));
@@ -189,11 +201,71 @@ void ConfigureGeneral::ApplyConfiguration() {
 #ifdef __unix__
         Settings::values.enable_gamemode = ui->toggle_gamemode->isChecked();
 #endif
+        Settings::values.ra_enabled = ui->ra_enable_checkbox->isChecked();
+        Settings::values.ra_hardcore_mode = ui->ra_hardcore_checkbox->isChecked();
     }
 }
 
 void ConfigureGeneral::RetranslateUI() {
     ui->retranslateUi(this);
+}
+
+void ConfigureGeneral::UpdateRetroAchievementsLoginState() {
+    auto& client = Core::System::GetInstance().RetroAchievementsClient();
+    const bool logged_in = client.IsLoggedIn();
+
+    ui->ra_login_form->setVisible(!logged_in);
+    ui->ra_logged_in_widget->setVisible(logged_in);
+
+    if (logged_in) {
+        const QString display_name = QString::fromStdString(client.GetDisplayName());
+        ui->ra_status_label->setText(tr("Logged in as %1").arg(display_name));
+    }
+}
+
+void ConfigureGeneral::OnRetroAchievementsLogin() {
+    const QString username = ui->ra_username_edit->text().trimmed();
+    const QString password = ui->ra_password_edit->text();
+
+    if (username.isEmpty() || password.isEmpty()) {
+        QMessageBox::warning(this, tr("RetroAchievements"),
+                             tr("Please enter your username and password."));
+        return;
+    }
+
+    ui->ra_login_button->setEnabled(false);
+    ui->ra_login_button->setText(tr("Logging in…"));
+
+    auto& client = Core::System::GetInstance().RetroAchievementsClient();
+    // Ensure the client is initialized even outside of a running game
+    client.Initialize();
+
+    client.LoginWithPassword(
+        username.toStdString(), password.toStdString(),
+        [this](bool success, const std::string& message) {
+            QMetaObject::invokeMethod(this, [this, success, message]() {
+                ui->ra_login_button->setEnabled(true);
+                ui->ra_login_button->setText(tr("Log In"));
+                ui->ra_password_edit->clear();
+
+                if (success) {
+                    UpdateRetroAchievementsLoginState();
+                } else {
+                    QMessageBox::warning(this, tr("RetroAchievements Login Failed"),
+                                         QString::fromStdString(message));
+                }
+            });
+        });
+}
+
+void ConfigureGeneral::OnRetroAchievementsLogout() {
+    auto reply = QMessageBox::question(this, tr("RetroAchievements"),
+                                       tr("Log out of RetroAchievements?"),
+                                       QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply != QMessageBox::Yes) return;
+
+    Core::System::GetInstance().RetroAchievementsClient().Logout();
+    UpdateRetroAchievementsLoginState();
 }
 
 void ConfigureGeneral::SetupPerGameUI() {
@@ -219,4 +291,5 @@ void ConfigureGeneral::SetupPerGameUI() {
     ui->button_reset_defaults->setVisible(false);
     ui->toggle_gamemode->setVisible(false);
     ui->updates_group->setVisible(false);
+    ui->retroachievements_group->setVisible(false);
 }

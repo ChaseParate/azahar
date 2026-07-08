@@ -50,6 +50,7 @@ private:
     void ReadUILayoutValues();
     void ReadUtilityValues();
     void ReadWebServiceValues();
+    void ReadRetroAchievementsValues();
     void ReadVideoDumpingValues();
 
     void SaveValues();
@@ -71,6 +72,7 @@ private:
     void SaveUILayoutValues();
     void SaveUtilityValues();
     void SaveWebServiceValues();
+    void SaveRetroAchievementsValues();
     void SaveVideoDumpingValues();
 
     /**

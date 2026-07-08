@@ -2507,6 +2507,18 @@ void GMainWindow::OnStartGame() {
 
     UpdateSaveStates();
     UpdateStatusButtons();
+
+    // Register achievement popup callback — fired on the emulator thread, marshalled to UI thread.
+    system.RetroAchievementsClient().SetAchievementTriggeredCallback(
+        [this](const std::string& title, const std::string& description, uint32_t /*id*/) {
+            QMetaObject::invokeMethod(this, [this, title, description]() {
+                QMessageBox::information(
+                    this, tr("Achievement Unlocked!"),
+                    tr("<b>%1</b><br>%2")
+                        .arg(QString::fromStdString(title))
+                        .arg(QString::fromStdString(description)));
+            });
+        });
 }
 
 void GMainWindow::OnRestartGame() {
@@ -2543,6 +2555,7 @@ void GMainWindow::OnPauseContinueGame() {
 
 void GMainWindow::OnStopGame() {
     SetTurboEnabled(false);
+    system.RetroAchievementsClient().SetAchievementTriggeredCallback(nullptr);
 
     play_time_manager->Stop();
     // Update game list to show new play time
@@ -4113,11 +4126,15 @@ void GMainWindow::UpdateWindowTitle() {
     if (game_title.isEmpty()) {
         setWindowTitle(QStringLiteral("Azahar %1").arg(full_name));
     } else {
-        setWindowTitle(QStringLiteral("Azahar %1 | %2").arg(full_name, game_title));
+        const std::string rp = system.RetroAchievementsClient().GetRichPresenceMessage();
+        const QString title_with_rp =
+            rp.empty() ? game_title
+                       : QStringLiteral("%1 | %2").arg(game_title, QString::fromStdString(rp));
+        setWindowTitle(QStringLiteral("Azahar %1 | %2").arg(full_name, title_with_rp));
         render_window->setWindowTitle(
-            QStringLiteral("Azahar %1 | %2 | %3").arg(full_name, game_title, tr("Primary Window")));
+            QStringLiteral("Azahar %1 | %2 | %3").arg(full_name, title_with_rp, tr("Primary Window")));
         secondary_window->setWindowTitle(QStringLiteral("Azahar %1 | %2 | %3")
-                                             .arg(full_name, game_title, tr("Secondary Window")));
+                                             .arg(full_name, title_with_rp, tr("Secondary Window")));
     }
 }
 

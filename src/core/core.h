@@ -18,6 +18,7 @@
 #include "core/hle/service/plgldr/plgldr.h"
 #include "core/movie.h"
 #include "core/perf_stats.h"
+#include "core/retroachievements/client.h"
 
 namespace Frontend {
 class EmuWindow;
@@ -378,6 +379,11 @@ public:
     /// Applies any changes to settings to this core instance.
     void ApplySettings();
 
+    /// Gets a reference to the RetroAchievements client
+    [[nodiscard]] RetroAchievements::Client& RetroAchievementsClient() {
+        return ra_client;
+    }
+
     void RegisterAppLoaderEarly(std::unique_ptr<Loader::AppLoader>& loader);
 
     void InsertCartridge(const std::string& path);
@@ -438,6 +444,9 @@ private:
 
     /// Cheats manager
     Cheats::CheatEngine cheat_engine;
+
+    /// RetroAchievements client
+    RetroAchievements::Client ra_client;
 
     /// Video dumper backend
     std::shared_ptr<VideoDumper::Backend> video_dumper;

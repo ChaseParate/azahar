@@ -28,5 +28,9 @@ public:
     void SetupPerGameUI();
 
 private:
+    void UpdateRetroAchievementsLoginState();
+    void OnRetroAchievementsLogin();
+    void OnRetroAchievementsLogout();
+
     std::unique_ptr<Ui::ConfigureGeneral> ui;
 };
