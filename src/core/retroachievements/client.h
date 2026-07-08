@@ -87,10 +87,14 @@ public:
 
     // Register a callback invoked (on the emulator thread) when an achievement unlocks.
     // The UI layer sets this to show a popup. Pass nullptr to clear.
-    void SetAchievementTriggeredCallback(AchievementTriggeredCallback callback);
-
+    // Called when a leaderboard tracker should be shown/updated/hidden.
+    // value is empty when the tracker should be hidden.
+    using LeaderboardTrackerCallback = std::function<void(const std::string& value)>;
     using LeaderboardEntriesCallback =
         std::function<void(bool success, std::vector<LeaderboardRankEntry> entries)>;
+
+    void SetAchievementTriggeredCallback(AchievementTriggeredCallback callback);
+    void SetLeaderboardTrackerCallback(LeaderboardTrackerCallback callback);
 
     [[nodiscard]] std::vector<AchievementEntry> GetAchievements() const;
     void FetchLeaderboardEntries(uint32_t leaderboard_id, uint32_t count,

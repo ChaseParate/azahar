@@ -29,6 +29,7 @@ struct Client::Impl {
     explicit Impl(Core::System& system_) : system(system_) {}
 
     AchievementTriggeredCallback on_achievement_triggered;
+    LeaderboardTrackerCallback on_leaderboard_tracker;
 
 #ifdef ENABLE_RETROACHIEVEMENTS
     rc_client_t* rc_client = nullptr;
@@ -119,12 +120,18 @@ struct Client::Impl {
         case RC_CLIENT_EVENT_LEADERBOARD_FAILED:
             LOG_INFO(RetroAchievements, "Leaderboard attempt failed: {}",
                      event->leaderboard ? event->leaderboard->title : "unknown");
+            if (self && self->on_leaderboard_tracker) {
+                self->on_leaderboard_tracker(""); // hide tracker
+            }
             break;
 
         case RC_CLIENT_EVENT_LEADERBOARD_SUBMITTED:
             LOG_INFO(RetroAchievements, "Leaderboard score submitted: {} — {}",
                      event->leaderboard ? event->leaderboard->title : "unknown",
                      event->leaderboard ? event->leaderboard->tracker_value : "");
+            if (self && self->on_leaderboard_tracker) {
+                self->on_leaderboard_tracker(""); // hide tracker on submit
+            }
             break;
 
         case RC_CLIENT_EVENT_LEADERBOARD_SCOREBOARD:
@@ -132,9 +139,31 @@ struct Client::Impl {
                      event->leaderboard ? event->leaderboard->title : "unknown");
             break;
 
-        case RC_CLIENT_EVENT_GAME_COMPLETED:
-            LOG_INFO(RetroAchievements, "Game completed — all achievements earned!");
+        case RC_CLIENT_EVENT_LEADERBOARD_TRACKER_SHOW:
+        case RC_CLIENT_EVENT_LEADERBOARD_TRACKER_UPDATE:
+            if (self && self->on_leaderboard_tracker && event->leaderboard_tracker) {
+                self->on_leaderboard_tracker(event->leaderboard_tracker->display);
+            }
             break;
+
+        case RC_CLIENT_EVENT_LEADERBOARD_TRACKER_HIDE:
+            if (self && self->on_leaderboard_tracker) {
+                self->on_leaderboard_tracker("");
+            }
+            break;
+
+        case RC_CLIENT_EVENT_GAME_COMPLETED: {
+            LOG_INFO(RetroAchievements, "Game completed — all achievements earned!");
+            // Fire achievement callback with a synthetic mastery notification so the UI
+            // layer can show an overlay without needing a separate callback type.
+            if (self && self->on_achievement_triggered) {
+                const rc_client_game_t* game = rc_client_get_game_info(client);
+                const std::string title_str =
+                    game && game->title ? std::string("Mastered: ") + game->title : "Game Mastered!";
+                self->on_achievement_triggered(title_str, "All achievements earned!", 0);
+            }
+            break;
+        }
 
         case RC_CLIENT_EVENT_RESET:
             // rcheevos requests a reset when hardcore mode is enabled mid-game
@@ -363,6 +392,10 @@ bool Client::IsHardcoreEnabled() const {
 
 void Client::SetAchievementTriggeredCallback(AchievementTriggeredCallback callback) {
     impl->on_achievement_triggered = std::move(callback);
+}
+
+void Client::SetLeaderboardTrackerCallback(LeaderboardTrackerCallback callback) {
+    impl->on_leaderboard_tracker = std::move(callback);
 }
 
 bool Client::IsLoggedIn() const {
