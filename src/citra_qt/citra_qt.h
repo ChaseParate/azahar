@@ -46,6 +46,7 @@ class GraphicsVertexShaderWidget;
 class GRenderWindow;
 class IPCRecorderWidget;
 class LLEServiceModulesWidget;
+class AchievementListDialog;
 class AchievementOverlay;
 class LoadingScreen;
 #if MICROPROFILE_ENABLED
@@ -249,6 +250,7 @@ private slots:
     void OnGameListShowList(bool show);
     void OnGameListOpenPerGameProperties(const QString& file);
     void OnConfigurePerGame();
+    void OnShowAchievementList();
     void OnShowRALeaderboards();
     void OnMenuLoadFile();
     void OnMenuSetUpSystemFiles();
@@ -348,6 +350,7 @@ private:
     GameListPlaceholder* game_list_placeholder;
     LoadingScreen* loading_screen;
     AchievementOverlay* achievement_overlay;
+    AchievementListDialog* achievement_list_dialog = nullptr;
 
     // Status bar elements
     QProgressBar* progress_bar = nullptr;

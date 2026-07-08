@@ -38,6 +38,7 @@
 #endif
 #include "citra_meta/common_strings.h"
 #include "citra_qt/aboutdialog.h"
+#include "citra_qt/achievement_list_dialog.h"
 #include "citra_qt/achievement_overlay.h"
 #include "citra_qt/leaderboard_dialog.h"
 #include "citra_qt/applets/mii_selector.h"
@@ -1060,6 +1061,8 @@ void GMainWindow::ConnectMenuEvents() {
     });
     connect_menu(ui->action_Configure, &GMainWindow::OnConfigure, QAction::PreferencesRole);
     connect_menu(ui->action_Configure_Current_Game, &GMainWindow::OnConfigurePerGame);
+    connect(ui->action_RA_Achievements, &QAction::triggered, this,
+            &GMainWindow::OnShowAchievementList);
     connect(ui->action_RA_Leaderboards, &QAction::triggered, this,
             &GMainWindow::OnShowRALeaderboards);
 
@@ -1144,6 +1147,7 @@ void GMainWindow::UpdateMenuState() {
         ui->action_Remove_Amiibo,
         ui->action_Pause,
         ui->action_Advance_Frame,
+        ui->action_RA_Achievements,
         ui->action_RA_Leaderboards,
     };
 
@@ -2522,6 +2526,9 @@ void GMainWindow::OnStartGame() {
             QMetaObject::invokeMethod(this, [this, title, description]() {
                 achievement_overlay->ShowAchievement(QString::fromStdString(title),
                                                      QString::fromStdString(description));
+                if (achievement_list_dialog) {
+                    achievement_list_dialog->Refresh();
+                }
             });
         });
 }
@@ -4050,6 +4057,20 @@ void GMainWindow::OnLanguageChanged(const QString& locale) {
     ui->retranslateUi(this);
     RetranslateStatusBar();
     UpdateWindowTitle();
+}
+
+void GMainWindow::OnShowAchievementList() {
+    // Use a non-modal dialog so gameplay can continue; only one open at a time.
+    if (!achievement_list_dialog) {
+        achievement_list_dialog = new AchievementListDialog(system, this);
+        connect(achievement_list_dialog, &QDialog::finished, this, [this]() {
+            achievement_list_dialog = nullptr;
+        });
+        achievement_list_dialog->show();
+    } else {
+        achievement_list_dialog->raise();
+        achievement_list_dialog->activateWindow();
+    }
 }
 
 void GMainWindow::OnShowRALeaderboards() {
