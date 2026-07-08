@@ -18,6 +18,18 @@ namespace RetroAchievements {
 
 using LoginCallback = std::function<void(bool success, const std::string& message)>;
 
+struct AchievementEntry {
+    std::string title;
+    std::string description;
+    std::string measured_progress; // e.g. "5/10" when partially complete
+    float measured_percent;        // 0.0–100.0
+    uint32_t id;
+    uint32_t points;
+    time_t unlock_time; // 0 if not unlocked
+    uint8_t state;      // RC_CLIENT_ACHIEVEMENT_STATE_* values
+    uint8_t bucket;     // RC_CLIENT_ACHIEVEMENT_BUCKET_* values
+};
+
 struct LeaderboardEntry {
     std::string title;
     std::string description;
@@ -70,6 +82,7 @@ public:
     // The UI layer sets this to show a popup. Pass nullptr to clear.
     void SetAchievementTriggeredCallback(AchievementTriggeredCallback callback);
 
+    [[nodiscard]] std::vector<AchievementEntry> GetAchievements() const;
     [[nodiscard]] std::vector<LeaderboardEntry> GetLeaderboards() const;
     [[nodiscard]] bool IsHardcoreEnabled() const;
     [[nodiscard]] bool IsLoggedIn() const;

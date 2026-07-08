@@ -407,6 +407,40 @@ std::string Client::GetLoginToken() const {
     return Settings::values.ra_token;
 }
 
+std::vector<AchievementEntry> Client::GetAchievements() const {
+    std::vector<AchievementEntry> result;
+#ifdef ENABLE_RETROACHIEVEMENTS
+    if (!impl->rc_client || !IsGameLoaded()) return result;
+
+    rc_client_achievement_list_t* list = rc_client_create_achievement_list(
+        impl->rc_client, RC_CLIENT_ACHIEVEMENT_CATEGORY_CORE,
+        RC_CLIENT_ACHIEVEMENT_LIST_GROUPING_LOCK_STATE);
+    if (!list) return result;
+
+    for (uint32_t b = 0; b < list->num_buckets; ++b) {
+        const rc_client_achievement_bucket_t& bucket = list->buckets[b];
+        for (uint32_t i = 0; i < bucket.num_achievements; ++i) {
+            const rc_client_achievement_t* a = bucket.achievements[i];
+            if (!a) continue;
+            result.push_back({
+                a->title       ? a->title       : "",
+                a->description ? a->description : "",
+                std::string(a->measured_progress),
+                a->measured_percent,
+                a->id,
+                a->points,
+                a->unlock_time,
+                a->state,
+                a->bucket,
+            });
+        }
+    }
+
+    rc_client_destroy_achievement_list(list);
+#endif
+    return result;
+}
+
 std::vector<LeaderboardEntry> Client::GetLeaderboards() const {
     std::vector<LeaderboardEntry> result;
 #ifdef ENABLE_RETROACHIEVEMENTS
