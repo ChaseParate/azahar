@@ -893,6 +893,7 @@ void QtConfig::ReadRetroAchievementsValues() {
 
     ReadBasicSetting(Settings::values.ra_enabled);
     ReadBasicSetting(Settings::values.ra_hardcore_mode);
+    ReadBasicSetting(Settings::values.ra_mock_mode);
     Settings::values.ra_username =
         ReadSetting(QStringLiteral("ra_username")).toString().toStdString();
     Settings::values.ra_token =
@@ -1429,6 +1430,7 @@ void QtConfig::SaveRetroAchievementsValues() {
 
     WriteBasicSetting(Settings::values.ra_enabled);
     WriteBasicSetting(Settings::values.ra_hardcore_mode);
+    WriteBasicSetting(Settings::values.ra_mock_mode);
     WriteSetting(QStringLiteral("ra_username"),
                  QString::fromStdString(Settings::values.ra_username));
     WriteSetting(QStringLiteral("ra_token"),

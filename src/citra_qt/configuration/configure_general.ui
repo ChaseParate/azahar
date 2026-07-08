@@ -338,6 +338,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="ra_mock_mode_checkbox">
+          <property name="text">
+           <string>Mock Mode (offline testing — no RA account needed)</string>
+          </property>
+          <property name="toolTip">
+           <string>Intercepts all RetroAchievements network calls and returns fake responses. Loads a synthetic game with two test achievements that fire after ~1 and ~5 seconds. Use this to verify the full pipeline (memory reads, overlays, HUD) without a real RA account.</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QWidget" name="ra_login_form" native="true">
           <layout class="QGridLayout" name="ra_login_grid">
            <item row="0" column="0">

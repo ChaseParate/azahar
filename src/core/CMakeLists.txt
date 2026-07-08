@@ -525,6 +525,8 @@ endif()
 target_sources(citra_core PRIVATE
     retroachievements/client.cpp
     retroachievements/client.h
+    retroachievements/mock_server.cpp
+    retroachievements/mock_server.h
 )
 
 if (ENABLE_RETROACHIEVEMENTS)

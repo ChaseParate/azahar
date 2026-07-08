@@ -91,6 +91,7 @@ void ConfigureGeneral::SetConfiguration() {
     if (Settings::IsConfiguringGlobal()) {
         ui->ra_enable_checkbox->setChecked(Settings::values.ra_enabled.GetValue());
         ui->ra_hardcore_checkbox->setChecked(Settings::values.ra_hardcore_mode.GetValue());
+        ui->ra_mock_mode_checkbox->setChecked(Settings::values.ra_mock_mode.GetValue());
 
         ui->turbo_limit->setValue(SettingsToSlider(Settings::values.turbo_limit.GetValue()));
         ui->turbo_limit_display_label->setText(
@@ -203,6 +204,7 @@ void ConfigureGeneral::ApplyConfiguration() {
 #endif
         Settings::values.ra_enabled = ui->ra_enable_checkbox->isChecked();
         Settings::values.ra_hardcore_mode = ui->ra_hardcore_checkbox->isChecked();
+        Settings::values.ra_mock_mode = ui->ra_mock_mode_checkbox->isChecked();
     }
 }
 

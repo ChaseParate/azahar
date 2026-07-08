@@ -3,6 +3,7 @@
 // Refer to the license.txt file included.
 
 #include "core/retroachievements/client.h"
+#include "core/retroachievements/mock_server.h"
 #include "common/logging/log.h"
 #include "common/settings.h"
 #include "core/core.h"
@@ -274,7 +275,9 @@ void Client::Initialize() {
     if (impl->rc_client) {
         return; // already initialized
     }
-    impl->rc_client = rc_client_create(Impl::ReadMemory, Impl::ServerCall);
+    const bool mock_mode = Settings::values.ra_mock_mode.GetValue();
+    impl->rc_client = rc_client_create(Impl::ReadMemory,
+                                       mock_mode ? MockServerCall : Impl::ServerCall);
     if (!impl->rc_client) {
         LOG_ERROR(RetroAchievements, "Failed to create rc_client");
         return;
@@ -282,6 +285,14 @@ void Client::Initialize() {
 
     rc_client_set_userdata(impl->rc_client, impl.get());
     rc_client_set_event_handler(impl->rc_client, Impl::OnEvent);
+
+    if (mock_mode) {
+        LOG_INFO(RetroAchievements,
+                 "*** MOCK MODE ENABLED *** Network calls are intercepted. "
+                 "Load any ROM to get 2 test achievements (~1s and ~5s after load).");
+        LoginWithToken("MockUser", "MOCKTOKEN123", nullptr);
+        return;
+    }
 
     LOG_INFO(RetroAchievements, "rc_client initialized");
 
