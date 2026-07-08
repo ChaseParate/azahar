@@ -111,6 +111,27 @@ struct Client::Impl {
             }
             break;
 
+        case RC_CLIENT_EVENT_LEADERBOARD_STARTED:
+            LOG_INFO(RetroAchievements, "Leaderboard attempt started: {}",
+                     event->leaderboard ? event->leaderboard->title : "unknown");
+            break;
+
+        case RC_CLIENT_EVENT_LEADERBOARD_FAILED:
+            LOG_INFO(RetroAchievements, "Leaderboard attempt failed: {}",
+                     event->leaderboard ? event->leaderboard->title : "unknown");
+            break;
+
+        case RC_CLIENT_EVENT_LEADERBOARD_SUBMITTED:
+            LOG_INFO(RetroAchievements, "Leaderboard score submitted: {} — {}",
+                     event->leaderboard ? event->leaderboard->title : "unknown",
+                     event->leaderboard ? event->leaderboard->tracker_value : "");
+            break;
+
+        case RC_CLIENT_EVENT_LEADERBOARD_SCOREBOARD:
+            LOG_INFO(RetroAchievements, "Leaderboard scoreboard updated: {}",
+                     event->leaderboard ? event->leaderboard->title : "unknown");
+            break;
+
         case RC_CLIENT_EVENT_GAME_COMPLETED:
             LOG_INFO(RetroAchievements, "Game completed — all achievements earned!");
             break;
