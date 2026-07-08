@@ -13,6 +13,7 @@
 #include <httplib.h>
 #include <rc_client.h>
 #include <rc_consoles.h>
+#include <rc_hash.h>
 #include "core/memory.h"
 #endif
 
@@ -244,9 +245,12 @@ struct Client::Impl {
                      "RA address 0x0 = FCRAM byte 0 = virtual 0x14000000 (linear heap). "
                      "Check the log filter 'RetroAchievements' while playing to see events.");
         } else if (result == RC_NO_GAME_LOADED) {
+            // rc_client_get_game_info() still returns a struct with the hash even when unrecognised.
+            const rc_client_game_t* game = rc_client_get_game_info(client);
             LOG_INFO(RetroAchievements,
-                     "Game not found in RetroAchievements database — "
-                     "ROM may not be supported or hash did not match.");
+                     "Game not found in RetroAchievements database "
+                     "(hash: {}) — register it on RA to add achievements.",
+                     (game && game->hash) ? game->hash : "unknown");
         } else {
             LOG_WARNING(RetroAchievements, "Game identification failed: {}",
                         error_message ? error_message : "unknown error");
@@ -354,6 +358,19 @@ void Client::LoadGame(const std::string& filepath) {
         return;
     }
     ApplyHardcoreMode();
+
+    // Compute and log the hash before contacting the server.
+    // This hash is what you submit to retroachievements.org when registering a new game.
+    char hash[33]{};
+    if (rc_hash_generate_from_file(hash, RC_CONSOLE_NINTENDO_3DS, filepath.c_str())) {
+        LOG_INFO(RetroAchievements, "ROM hash (MD5): {} — use this to register the game on RA",
+                 hash);
+    } else {
+        LOG_WARNING(RetroAchievements,
+                    "Could not compute ROM hash for: {} "
+                    "(encrypted CIA/CCI may need decryption keys)", filepath);
+    }
+
     LOG_INFO(RetroAchievements, "Identifying game: {}", filepath);
     rc_client_begin_identify_and_load_game(impl->rc_client, RC_CONSOLE_NINTENDO_3DS,
                                            filepath.c_str(), nullptr, 0,
