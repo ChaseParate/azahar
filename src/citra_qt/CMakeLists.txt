@@ -143,6 +143,8 @@ add_library(citra_qt STATIC EXCLUDE_FROM_ALL
     achievement_overlay.h
     leaderboard_dialog.cpp
     leaderboard_dialog.h
+    leaderboard_tracker_overlay.cpp
+    leaderboard_tracker_overlay.h
     loading_screen.cpp
     loading_screen.h
     loading_screen.ui

@@ -41,6 +41,7 @@
 #include "citra_qt/achievement_list_dialog.h"
 #include "citra_qt/achievement_overlay.h"
 #include "citra_qt/leaderboard_dialog.h"
+#include "citra_qt/leaderboard_tracker_overlay.h"
 #include "citra_qt/applets/mii_selector.h"
 #include "citra_qt/applets/swkbd.h"
 #include "citra_qt/bootmanager.h"
@@ -504,6 +505,7 @@ void GMainWindow::InitializeWidgets() {
 
     // Overlay parented to render_window so it sits on top of the game surface
     achievement_overlay = new AchievementOverlay(render_window);
+    lb_tracker_overlay = new LeaderboardTrackerOverlay(render_window);
     connect(loading_screen, &LoadingScreen::Hidden, this, [&] {
         loading_screen->Clear();
         if (emulation_running) {
@@ -2537,6 +2539,14 @@ void GMainWindow::OnStartGame() {
         });
     // Game may already be identified by the time OnStartGame fires (fast loads), so seed the label.
     UpdateRAStatusLabel();
+
+    system.RetroAchievementsClient().SetLeaderboardTrackerCallback(
+        [this](const std::string& value) {
+            const QString qval = QString::fromStdString(value);
+            QMetaObject::invokeMethod(this, [this, qval]() {
+                lb_tracker_overlay->Show(qval);
+            });
+        });
 }
 
 void GMainWindow::OnRestartGame() {
@@ -2578,6 +2588,9 @@ void GMainWindow::OnStopGame() {
     play_time_manager->Stop();
     // Update game list to show new play time
     game_list->PopulateAsync(UISettings::values.game_dirs);
+
+    system.RetroAchievementsClient().SetLeaderboardTrackerCallback(nullptr);
+    lb_tracker_overlay->hide();
 
     ShutdownGame();
     graphics_api_button->setEnabled(true);

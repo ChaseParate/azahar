@@ -48,6 +48,7 @@ class IPCRecorderWidget;
 class LLEServiceModulesWidget;
 class AchievementListDialog;
 class AchievementOverlay;
+class LeaderboardTrackerOverlay;
 class LoadingScreen;
 #if MICROPROFILE_ENABLED
 class MicroProfileDialog;
@@ -352,6 +353,7 @@ private:
     LoadingScreen* loading_screen;
     AchievementOverlay* achievement_overlay;
     AchievementListDialog* achievement_list_dialog = nullptr;
+    LeaderboardTrackerOverlay* lb_tracker_overlay;
 
     // Status bar elements
     QProgressBar* progress_bar = nullptr;
